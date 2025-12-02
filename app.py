@@ -1,43 +1,48 @@
+# Recreate the corrected version of `app.py` after the environment reset
+
+app_code = """
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 
-st.set_page_config(page_title="Witness Archive", layout="wide")
-
+# Load the dataset
 @st.cache_data
 def load_data():
     return pd.read_csv("data/ICE_Chicago_REAL_dataset.csv")
 
 df = load_data()
-st.title("📚 Witness Archive – ICE Narratives in Chicago")
 
-# Sidebar Filters
-sources = st.sidebar.multiselect("Source", df["Source"].unique(), default=df["Source"].unique())
-emotions = st.sidebar.multiselect("Emotion", df["Emotion Label"].unique(), default=df["Emotion Label"].unique())
-themes = st.sidebar.multiselect("Theme", df["Thematic Label"].unique(), default=df["Thematic Label"].unique())
+# Sidebar filters
+emotion_filter = st.sidebar.multiselect("Filter by Emotion", sorted(df["Emotion"].dropna().unique()))
+theme_filter = st.sidebar.multiselect("Filter by Theme", sorted(df["Theme"].dropna().unique()))
+source_filter = st.sidebar.multiselect("Filter by Source", sorted(df["Source"].dropna().unique()))
 
-# Filtered Data
-filtered = df[
-    df["Source"].isin(sources) &
-    df["Emotion Label"].isin(emotions) &
-    df["Thematic Label"].isin(themes)
-]
+filtered_df = df.copy()
+if emotion_filter:
+    filtered_df = filtered_df[filtered_df["Emotion"].isin(emotion_filter)]
+if theme_filter:
+    filtered_df = filtered_df[filtered_df["Theme"].isin(theme_filter)]
+if source_filter:
+    filtered_df = filtered_df[filtered_df["Source"].isin(source_filter)]
 
-# Charts
-col1, col2 = st.columns(2)
-with col1:
-    st.plotly_chart(px.histogram(filtered, x="Emotion Label", title="Emotion Distribution"), use_container_width=True)
-with col2:
-    st.plotly_chart(px.histogram(filtered, x="Thematic Label", title="Theme Distribution"), use_container_width=True)
+# Main dashboard
+st.title("Witness Archive: ICE Raids in Chicago")
+st.markdown("Explore public testimonies and news narratives tagged by emotion and theme.")
 
-# Table Viewer
-st.markdown("### Narrative Snippets")
-for _, row in filtered.iterrows():
-    st.markdown(f"**{row['Title']}** ({row['Source']}, {row['Publication Date']})  
-"
-                f"*Emotion:* {row['Emotion Label']} | *Theme:* {row['Thematic Label']}  
-"
-                f"[Read More]({row['URL']})  
-"
-                f"> {row['Summary']}")
+for _, row in filtered_df.iterrows():
+    title = row.get("Title", "No Title")
+    source = row.get("Source", "Unknown Source")
+    date = row.get("Publication Date", "Unknown Date")
+    excerpt = row.get("Text Excerpt", "")
+    url = row.get("URL", "#")
+
+    st.markdown(f"**{title}** ({source}, {date})  \n[Read More]({url})")
+    st.write(excerpt)
     st.markdown("---")
+"""
+
+# Save the corrected code to app.py
+app_path = "/mnt/data/app.py"
+with open(app_path, "w") as f:
+    f.write(app_code)
+
+app_path
